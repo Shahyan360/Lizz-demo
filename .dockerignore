@@ -1,0 +1,37 @@
+# Keep the build context small and secret-free.
+
+# Dependencies / build output (regenerated inside the image)
+node_modules
+.next
+dist
+out
+
+# Secrets & local env — MUST never enter the build context
+.env
+.env.*
+!.env.example
+
+# VCS / CI / editor
+.git
+.gitignore
+.circleci
+.claude
+.vscode
+.idea
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Tests output & local artifacts
+test-results
+coverage
+
+# Docs (not needed at build/runtime)
+*.md
+docs
+
+# OS cruft
+.DS_Store
+**/.DS_Store

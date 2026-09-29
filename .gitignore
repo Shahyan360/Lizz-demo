@@ -1,0 +1,16 @@
+.next
+node_modules
+.env
+dist
+.agents
+.claude
+
+# CI / test local artifacts
+test-results
+coverage
+ci/.cache
+.image-ref
+
+# Local Zoho inbox exports — real customer/employee PII; never commit
+src/app/api/zoho/example_emails/*.txt
+data/email-corpus/

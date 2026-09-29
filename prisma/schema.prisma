@@ -1,0 +1,621 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum DraftStatus {
+  PENDING_REVIEW
+  APPROVED
+  SENT
+  REJECTED
+  SENDING
+}
+
+enum ReviewLevel {
+  AUTO_SEND
+  MANUAL_REVIEW
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+  DECLINED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum DealStage {
+  NEW
+  QUOTED
+  WON
+  LOST
+}
+
+enum LeadStage {
+  NEW
+  ACTIVE
+  CUSTOMER
+}
+
+model Company {
+  id        String    @id @default(uuid())
+  name      String
+  domain    String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  contacts  Contact[]
+}
+
+model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  name                String?
+  password            String
+  role                Role                 @default(USER)
+  isActive            Boolean              @default(true)
+  sessionVersion      Int                  @default(0)
+  lastLoginAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  passwordResetTokens PasswordResetToken[]
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model GmailAccount {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  accessToken     String        @db.Text
+  refreshToken    String        @db.Text
+  tokenExpiry     DateTime
+  watchExpiration DateTime?
+  historyId       String?
+  syncStatus      String        @default("IDLE")
+  isActive        Boolean       @default(false)
+  lastSyncedAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  emailThreads    EmailThread[]
+}
+
+model Contact {
+  id                String           @id @default(uuid())
+  companyId         String?
+  company           Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  isCompanyExcluded Boolean          @default(false)
+  email             String           @unique
+  name              String?
+  relationshipScore Float            @default(0.5)
+  formalityLevel    Float            @default(0.8)
+  lifecycleStage    LeadStage        @default(NEW)
+  interactionCount  Int              @default(0)
+  lastInteractionAt DateTime         @default(now())
+  notes             String?          @db.Text
+  messages          EmailMessage[]
+  episodics         MemoryEpisodic[]
+  tasks             Task[]
+  meetings          Meeting[]
+  storedEmails      StoredEmail[]
+  deals             Deal[]
+
+  @@index([email])
+}
+
+model EmailThread {
+  id             String         @id @default(uuid())
+  gmailAccountId String?
+  gmailAccount   GmailAccount?  @relation(fields: [gmailAccountId], references: [id], onDelete: SetNull)
+  subject        String         @db.Text
+  snippet        String?        @db.Text
+  summary        String?        @db.Text
+  isArchived     Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  messages       EmailMessage[]
+  drafts         EmailDraft[]
+  tasks          Task[]
+  meetings       Meeting[]
+
+  @@index([gmailAccountId])
+}
+
+model EmailMessage {
+  id          String      @id @default(uuid())
+  threadId    String
+  thread      EmailThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  contactId   String?
+  contact     Contact?    @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  sender      String
+  recipients  Json?
+  subject     String?     @db.Text
+  bodyHtml    String?     @db.LongText
+  bodyText    String      @db.LongText
+  isIncoming  Boolean
+  receivedAt  DateTime
+  sentiment   String?
+  intent      String?
+  urgency     Float       @default(0.0)
+  embeddingId String?
+  createdAt   DateTime    @default(now())
+
+  @@index([threadId])
+  @@index([contactId])
+}
+
+model EmailDraft {
+  id             String            @id @default(uuid())
+  threadId       String
+  thread         EmailThread       @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  draftText      String            @db.Text
+  draftHtml      String?           @db.LongText
+  status         DraftStatus       @default(PENDING_REVIEW)
+  reviewLevel    ReviewLevel       @default(MANUAL_REVIEW)
+  confidence     Float             @default(0.0)
+  reasoningLog   String?           @db.Text
+  suggestedBy    String            @default("AI_AGENT")
+  approvedBy     String?
+  userEdits      String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  approvalEvents ApprovalHistory[]
+  aiTraces       AITrace[]
+
+  @@index([threadId])
+}
+
+model ApprovalHistory {
+  id          String     @id @default(uuid())
+  draftId     String
+  draft       EmailDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  action      String
+  original    String     @db.Text
+  modified    String     @db.Text
+  performedBy String
+  createdAt   DateTime   @default(now())
+
+  @@index([draftId])
+}
+
+model MemoryEpisodic {
+  id          String   @id @default(uuid())
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  triggerText String   @db.Text
+  replyText   String   @db.Text
+  embeddingId String   @unique
+  createdAt   DateTime @default(now())
+
+  @@index([contactId])
+}
+
+model MemorySemantic {
+  id          String   @id @default(uuid())
+  category    String
+  key         String
+  value       String   @db.Text
+  embeddingId String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CommunicationProfile {
+  id             String   @id @default(uuid())
+  greetingStyle  String   @default("Hi [Name],")
+  signoffStyle   String   @default("Best regards,\n[My Name]")
+  avgSentenceLen Int      @default(12)
+  formalityScale Float    @default(0.5)
+  vocabularyPref Json?
+  forbiddenWords Json?
+  updatedAt      DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String
+  payload   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model Deal {
+  id            String    @id @default(uuid())
+  contactId     String?
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title         String    @db.Text
+  stage         DealStage @default(NEW)
+  value         Float?
+  notes         String?   @db.Text
+  sourceFrom    String?
+  sourceSubject String?   @db.Text
+  sourceBody    String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  closedAt      DateTime?
+
+  @@index([contactId])
+  @@index([stage])
+}
+
+model StoredEmail {
+  id          String         @id @default(uuid())
+  messageId   String?        @unique
+  threadId    String?
+  folderId    String?
+  direction   EmailDirection
+  fromAddress String
+  fromName    String?
+  toAddress   String?
+  subject     String?        @db.Text
+  bodyText    String         @db.LongText
+  bodyHtml    String?        @db.LongText
+  contactId   String?
+  contact     Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  propertyLinks PropertyEmail[]
+  receivedAt  DateTime
+  createdAt   DateTime       @default(now())
+
+  @@index([contactId])
+  @@index([threadId])
+  @@index([fromAddress])
+  @@index([receivedAt])
+}
+
+model WebhookEvent {
+  id        String   @id @default(uuid())
+  messageId String   @unique
+  createdAt DateTime @default(now())
+}
+
+model BlockedSender {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model ServiceToken {
+  id          String   @id @default(uuid())
+  provider    String   @unique
+  accessToken String   @db.Text
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AITrace {
+  id           String      @id @default(uuid())
+  draftId      String?
+  draft        EmailDraft? @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  pipelineStep String
+  modelName    String
+  promptText   String      @db.LongText
+  responseText String      @db.LongText
+  tokenInput   Int
+  tokenOutput  Int
+  latencyMs    Int
+  createdAt    DateTime    @default(now())
+
+  @@index([draftId])
+}
+
+model Task {
+  id            String         @id @default(uuid())
+  title         String         @db.Text
+  description   String?        @db.Text
+  status        TaskStatus     @default(TODO)
+  priority      TaskPriority   @default(MEDIUM)
+  dueDate       DateTime?
+  completedAt   DateTime?
+  contactId     String?
+  contact       Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  threadId      String?
+  thread        EmailThread?   @relation(fields: [threadId], references: [id], onDelete: SetNull)
+  sourceFrom    String?
+  sourceSubject String?        @db.Text
+  sourceBody    String?        @db.Text
+  zohoTaskId    String?
+  assignee      String?
+  auditLogs     TaskAuditLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([contactId])
+  @@index([threadId])
+  @@index([status])
+  @@index([assignee])
+}
+
+model TaskAuditLog {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actorName String
+  action    String
+  message   String   @db.Text
+  assignee  String?
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model Meeting {
+  id          String        @id @default(uuid())
+  title       String        @db.Text
+  description String?       @db.Text
+  location    String?       @db.Text
+  startTime   DateTime
+  endTime     DateTime?
+  attendees   Json?
+  status      MeetingStatus @default(SCHEDULED)
+  contactId   String?
+  contact     Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  threadId    String?
+  thread      EmailThread?  @relation(fields: [threadId], references: [id], onDelete: SetNull)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([contactId])
+  @@index([threadId])
+  @@index([startTime])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  roleKey   String
+  isPrimary Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Property Intelligence ────────────────────────────────────────────────────
+
+enum PropertyType {
+  APARTMENT
+  MULTIFAMILY
+  HOA
+  CONDO_COMMUNITY
+}
+
+enum OpportunityRating {
+  HIGH
+  MEDIUM
+  LOW
+  UNKNOWN
+}
+
+enum QualificationStatus {
+  NEW_PROSPECT
+  RESEARCHING
+  QUALIFIED
+  PROPOSAL_READY
+  PROPOSAL_SENT
+  CUSTOMER
+  LOST
+}
+
+/// Top-level property record — mirrors Section 1 + 3 of the qualification form.
+model Property {
+  id                 String           @id @default(uuid())
+  name               String
+  propertyType       PropertyType
+  managementCompany  String?
+  streetAddress      String?
+  city               String?
+  state              String?
+  zipCode            String?
+  phone              String?
+  website            String?
+  numberOfUnits      Int?
+  estimatedResidents Int?
+  yearBuilt          Int?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  contacts       PropertyContact[]
+  existingSystem ExistingSystem?
+  deviceCount    DeviceCount?
+  opportunity    Opportunity?
+  emailLinks     PropertyEmail[]
+
+  @@index([propertyType])
+  @@map("properties")
+}
+
+/// Links the original stored mail to every property it helped identify or update.
+/// A mail may mention more than one property, so this is intentionally many-to-many.
+model PropertyEmail {
+  id           String      @id @default(uuid())
+  propertyId   String
+  storedEmailId String
+  property     Property    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  storedEmail  StoredEmail @relation(fields: [storedEmailId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@unique([propertyId, storedEmailId])
+  @@index([propertyId, createdAt])
+  @@index([storedEmailId])
+  @@map("property_emails")
+}
+
+/// Stores one or more contacts per property (manager, maintenance, regional).
+model PropertyContact {
+  id         String   @id @default(uuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  role       String   // e.g. "PROPERTY_MANAGER" | "MAINTENANCE_MANAGER" | "REGIONAL_MANAGER"
+  name       String?
+  email      String?
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([propertyId])
+  @@map("property_contacts")
+}
+
+/// Equipment already installed at the property — Section 4.
+model ExistingSystem {
+  id                 String   @id @default(uuid())
+  propertyId         String   @unique
+  property           Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Call Box
+  callBoxBrand       String?
+  callBoxModel       String?
+  callBoxQuantity    Int?
+
+  // Access Control
+  accessControlBrand String?
+  accessControlModel String?
+
+  // Surveillance
+  surveillanceBrand  String?
+  surveillanceModel  String?
+
+  // Credentials — stored as a JSON array of strings
+  credentials        Json?    // e.g. ["KEY_FOB","MOBILE_APP"]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("existing_systems")
+}
+
+/// Counts of secured doors, gates, cameras — Section 5.
+model DeviceCount {
+  id                      String   @id @default(uuid())
+  propertyId              String   @unique
+  property                Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  accessControlledDoors   Int?
+  additionalDoorsToSecure Int?
+  vehicleGates            Int?
+  pedestrianGates         Int?
+  garageDoors             Int?
+  adaDoorOperators        Int?
+  cameras                 Int?
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("device_counts")
+}
+
+/// Sales opportunity assessment — Section 6.
+/// lastContactDate is derived from the most recent follow_up record.
+model Opportunity {
+  id                      String              @id @default(uuid())
+  propertyId              String              @unique
+  property                Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  butterflyMxRating       OpportunityRating   @default(UNKNOWN)
+  invisibleIntercomRating OpportunityRating   @default(UNKNOWN)
+  opportunityNotes        String?             @db.Text
+
+  qualificationStatus     QualificationStatus @default(NEW_PROSPECT)
+  nextFollowUpDate        DateTime?
+  internalNotes           String?             @db.Text
+
+  followUps               FollowUp[]
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  @@index([qualificationStatus])
+  @@index([nextFollowUpDate])
+  @@map("opportunities")
+}
+
+/// Complete log of every sales interaction with a property.
+/// Replaces the single lastContactDate field with a full audit trail.
+model FollowUp {
+  id               String      @id @default(uuid())
+  opportunityId    String
+  opportunity      Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  contactedBy      String?     // sales rep name or email
+  contactMethod    String?     // CALL | EMAIL | VISIT | TEXT | OTHER
+  notes            String?     @db.Text
+  nextFollowUpDate DateTime?   // suggested next follow-up from this interaction
+
+  createdAt        DateTime    @default(now())
+
+  @@index([opportunityId])
+  @@index([createdAt])
+  @@map("follow_ups")
+}
+
+// ─── Quote Builder ────────────────────────────────────────────────────────────
+
+enum QuoteRequestStatus {
+  PENDING     // Link sent, waiting for customer to submit
+  SUBMITTED   // Customer submitted product selections
+  QUOTED      // Zoho estimate created
+  EXPIRED     // Token expired
+}
+
+model QuoteRequest {
+  id              String             @id @default(uuid())
+  token           String             @unique
+  customerName    String
+  customerEmail   String
+  expiresAt       DateTime
+  status          QuoteRequestStatus @default(PENDING)
+  zohoEstimateId  String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([token])
+  @@index([customerEmail])
+  @@index([status])
+  @@map("quote_requests")
+}
+

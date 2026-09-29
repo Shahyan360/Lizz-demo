@@ -1,0 +1,51 @@
+version: 2.1
+
+jobs:
+  build-image:
+    machine:
+      image: ubuntu-2404:current
+    working_directory: ~/app
+    steps:
+      - checkout
+      - run:
+          name: Build the runtime Docker image
+          command: bash ci/scripts/build-image.sh
+      - run:
+          name: Save image for deploy
+          command: |
+            mkdir -p /tmp/workspace
+            docker save "executive-ai-assistant:${CIRCLE_SHA1}" | gzip > /tmp/workspace/image.tar.gz
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths:
+            - image.tar.gz
+
+  deploy:
+    machine:
+      image: ubuntu-2404:current
+    working_directory: ~/app
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp/workspace
+      - run:
+          name: Install gcloud CLI (if absent)
+          command: bash ci/scripts/install-gcloud.sh
+      - run:
+          name: Push to Artifact Registry and deploy to Cloud Run
+          command: bash ci/scripts/deploy-gcp.sh
+
+workflows:
+  main-deploy:
+    jobs:
+      - build-image:
+          filters:
+            branches:
+              only: main
+      - deploy:
+          context: gcp-deploy
+          requires:
+            - build-image
+          filters:
+            branches:
+              only: main

@@ -1,0 +1,51 @@
+{
+  "name": "executive-ai-email-assistant",
+  "version": "1.0.0",
+  "description": "Production-grade personalized multi-agent AI email assistant platform",
+  "main": "dist/queues/workers/pipelineWorker.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker:pipeline": "ts-node src/queues/workers/pipelineWorker.ts",
+    "seed:admin": "ts-node scripts/seed-admin.ts",
+    "seed:team-members": "ts-node scripts/seed-team-members.ts",
+    "backfill:zoho": "ts-node scripts/backfill-zoho.ts",
+    "backfill:properties": "ts-node scripts/backfill-properties.ts",
+    "cleanup:own-contacts": "ts-node scripts/cleanup-own-contacts.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration"
+  },
+  "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
+    "@ckeditor/ckeditor5-react": "^6.3.0",
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^5.12.1",
+    "@qdrant/js-client-rest": "^1.8.0",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.7.1",
+    "dotenv": "^16.4.5",
+    "googleapis": "^134.0.0",
+    "ioredis": "^5.3.2",
+    "next": "^14.1.4",
+    "next-auth": "^4.24.14",
+    "openai": "^4.33.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.11.30",
+    "@types/react": "^18.2.73",
+    "@types/react-dom": "^18.2.22",
+    "prisma": "^5.12.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3",
+    "vitest": "^2.1.9"
+  }
+}

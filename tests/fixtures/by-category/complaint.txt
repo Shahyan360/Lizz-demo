@@ -1,0 +1,18 @@
+===== EMAIL 1 | gate stuck | outgoing =====
+[YOUR REPLY]
+Hey Tom, sorry the gate's been sticking on you. Sounds like the opener motor might be straining — is it stopping halfway or not moving at all? Let me know and we'll get a tech out. Thanks, Dave
+
+===== EMAIL 2 | invoice mixup | outgoing =====
+[YOUR REPLY]
+Hi Sara, thanks for flagging the billing error. I'll pull the invoice and sort the overcharge today, then send a corrected copy. Sorry for the mixup. Cheers, Dave
+
+===== EMAIL 3 | no reply marker | outgoing =====
+This block has no reply section and should be ignored by the extractor.
+
+===== EMAIL 4 | thank you | incoming =====
+[YOUR REPLY]
+This is an incoming block and must be skipped even though it has a reply marker.
+
+===== EMAIL 5 | short | outgoing =====
+[YOUR REPLY]
+ok
