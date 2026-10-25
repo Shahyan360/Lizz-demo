@@ -11,10 +11,10 @@
 - [x] Durable global/per-network inference ceiling with concurrent-claim tests.
 - [x] Request/response validation, same-origin checks and safe text rendering.
 - [x] Unit/security tests, type checking, dependency audit and source scan.
-- [ ] Desktop/mobile browser tests passing after final code changes.
-- [ ] Live inference verified through the deployed server.
-- [ ] Production deployment READY and public alias tested anonymously.
-- [ ] Client build checked for actual credential values.
+- [x] Desktop/mobile browser tests passing after final code changes (8 local, 8 deployed).
+- [x] Live inference verified through the deployed server (HTTP 200, Gemini 3.5 Flash Lite).
+- [x] Production deployment READY and public alias tested anonymously (`https://lizz-ai.vercel.app`).
+- [x] Client build checked for four actual credential values (15 assets, zero leaks).
 
 The implementation report records final evidence and replaces pending entries when verified.
 

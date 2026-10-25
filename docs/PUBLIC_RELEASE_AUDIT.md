@@ -28,3 +28,5 @@ Public demo must run without MySQL, Redis, Qdrant, Zoho, SMTP or any old account
 ## Acceptance evidence
 
 See `RELEASE_CHECKLIST.md` and `IMPLEMENTATION_REPORT.md` for checks actually run, deployment evidence, remaining work and the final release verdict. Real Zoho OAuth consent, live email synchronization, database migration execution, SMTP delivery and customer onboarding must not be marked verified without their separate infrastructure.
+
+During generation testing, the model-list response proved insufficient evidence of generation access: the old 2.5 model rejected this account, and 3.8 returned a high-demand error. The public runtime therefore uses verified `gemini-3.5-flash-lite` through the stateless Interactions API. Local and deployed end-to-end inference succeeded. This is separate from the unchanged legacy model configuration.
