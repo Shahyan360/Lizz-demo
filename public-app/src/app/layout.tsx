@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 export const metadata: Metadata = {
   title: { default: 'Lizz — A calmer kind of inbox', template: '%s · Lizz' },
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         {children}
+        <Script src="/portfolio-embed.js" strategy="afterInteractive" />
       </body>
     </html>
   );
