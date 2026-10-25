@@ -1,0 +1,35 @@
+{
+  "baseline": "f2be9f0",
+  "commitsInspected": 1,
+  "trackedFiles": 365,
+  "findings": {
+    "credential": [],
+    "contact": [
+      ".env.example",
+      "scripts/rag-smoke-test.ts",
+      "scripts/seed-admin.ts",
+      "src/app/admin/users/UserFormModal.tsx",
+      "src/app/api/assistant/chat/tools/definitions.ts",
+      "src/app/api/assistant/chat/tools/get-email-threads.ts",
+      "src/app/api/assistant/chat/utils.ts",
+      "src/app/api/zoho/reply-preview/route.ts",
+      "src/app/api/zoho/webhook/route.ts",
+      "src/app/contacts/AddContactButton.tsx",
+      "src/app/forgot-password/ForgotPasswordForm.tsx",
+      "src/app/login/LoginForm.tsx",
+      "src/app/properties/_components/steps/Step2Contacts.tsx",
+      "src/app/zoho/_components/ui.ts",
+      "src/lib/email/parse-headers.ts",
+      "src/lib/gmail-helpers.ts",
+      "src/lib/reply/business-knowledge.ts",
+      "src/lib/repositories/team-members.ts",
+      "src/lib/training/router-system.ts",
+      "tests/integration/blocklist.test.ts",
+      "tests/unit/llm-orchestrator.test.ts",
+      "tests/unit/llm-spam-check.test.ts"
+    ],
+    "environment": [],
+    "privateAssets": []
+  },
+  "notes": "Pattern scan; not a guarantee of absence. Values deliberately omitted. Contact hits need owner review and can include package-maintainer addresses."
+}
